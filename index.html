@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Carrier Manifest</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Noto+Sans+Thai:wght@100..900&display=swap" rel="stylesheet">
+
+	<!-- <style>
+		body{
+			font-family: "Noto Sans Thai", sans-serif;
+		}
+	</style> -->
+</head>
+<body class="bg-light">
+  <div class="container mt-5">
+    <h1 class="text-center mb-4">CARRIER MANIFEST</h1>
+
+    <div class="card p-4 mb-4">
+      <div class="mb-3">
+        <label for="excelFile" class="form-label">Upload Excel File</label>
+        <input type="file" class="form-control" id="excelFile" accept=".xlsx, .xls">
+      </div>
+      <div class="d-flex gap-2">
+        <!-- <button class="btn btn-primary" onclick="previewData()">Preview</button> -->
+        <button class="btn btn-success" onclick="saveAsPDF()">Save as PDF</button>
+        <!-- <button class="btn btn-secondary" onclick="window.print()">Print</button> -->
+        <button class="btn btn-secondary" onclick="downloadTemplate()">Download Template File</button>
+      </div>
+    </div>
+
+    <table class="table table-striped" id="dataTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tracking Number</th>
+          <th>Order Number</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    let importedData = [];
+
+    document.getElementById("excelFile").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        importedData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        displayTable();
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+
+    function displayTable() {
+      const tableBody = document.querySelector("#dataTable tbody");
+      tableBody.innerHTML = "";
+
+      importedData.slice(1).forEach((row, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${index + 1}</td><td>${row[0]}</td><td>${row[1]}</td>`;
+        tableBody.appendChild(tr);
+      });
+    }
+
+
+  function saveAsPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 10;
+  const companyName = "KLANDTH";
+  const today = new Date().toLocaleDateString();
+
+  const headers = [["#", "Tracking Number", "Order Number"]];
+  const data = importedData.slice(1).map((row, index) => [index + 1, row[0], row[1]]);
+
+  const totalPackages = importedData.length - 1; // นับจำนวน Tracking Number
+  let startY = 20;
+
+  // เพิ่มชื่อบริษัทและวันที่ที่หัวเอกสาร
+  doc.setFontSize(18);
+  doc.text(companyName, pageWidth / 2, 12, { align: "center"});
+
+  doc.setFontSize(12);
+  doc.text(`Date: ${today}`, margin, startY);
+  startY += 10;
+
+  // เพิ่ม Total of Package
+  doc.text(`Total of Package: ${totalPackages}`, margin, startY);
+  startY += 10;
+
+  // เพิ่มช่องข้อมูลพนักงานและขนส่ง
+  const employeeInfo = [
+    { label: "Klandth Staff",     value: "_____________________" },
+    { label: "Carrier Signature", value: "_____________________" },
+    { label: "Deliver Name",      value: "_____________________" },
+    { label: "Carrier Signature", value: "_____________________" },
+  ];
+
+  employeeInfo.forEach((info) => {
+    doc.text(`${info.label}: ${info.value}`, margin, startY);
+    startY += 10;
+  });
+
+  // ฟังก์ชัน autoTable
+  doc.autoTable({
+    startY: startY + 2,
+    head: headers,
+    body: data,
+    theme: "grid",
+    margin: { top: margin, left: margin, right: margin },
+ 
+    didDrawPage: function (data) {
+      // เพิ่มหมายเลขหน้าที่ด้านล่าง
+      doc.setFontSize(10);
+      doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - margin, pageHeight - margin, {
+        align: "right",
+      });
+	  doc.text(`Date: ${today}`, margin, pageHeight - margin);
+    },
+  });
+
+  // บันทึกไฟล์ PDF
+  doc.save("Carrier_Manifest.pdf");
+}
+
+
+    function downloadTemplate() {
+      const templateData = [
+        ["Tracking Number", "Order Number"],
+        ["123456789", "ORD001"],
+        ["987654321", "ORD002"],
+      ];
+
+      const worksheet = XLSX.utils.aoa_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+
+      XLSX.writeFile(workbook, "Carrier_Manifest_Template.xlsx");
+    }
+  </script>
+</body>
+</html>
