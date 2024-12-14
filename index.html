@@ -80,65 +80,67 @@
 
 
   function saveAsPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
-  const pageHeight = doc.internal.pageSize.height;
-  const margin = 10;
-  const companyName = "KLANDTH";
-  const today = new Date().toLocaleDateString();
+	const { jsPDF } = window.jspdf;
+	const doc = new jsPDF();
+	const pageWidth = doc.internal.pageSize.width;
+	const pageHeight = doc.internal.pageSize.height;
+	const margin = 10;
+	const companyName = "KLANDTH";
+	const today = new Date().toLocaleDateString();
+	const formattedDate = today.toString().split("T")[0]; // YYYY-MM-DD
+	const headers = [["#", "Tracking Number", "Order Number"]];
+	const data = importedData.slice(1).map((row, index) => [index + 1, row[0], row[1]]);
 
-  const headers = [["#", "Tracking Number", "Order Number"]];
-  const data = importedData.slice(1).map((row, index) => [index + 1, row[0], row[1]]);
+	const totalPackages = importedData.length - 1; // นับจำนวน Tracking Number
+	let startY = 20;
 
-  const totalPackages = importedData.length - 1; // นับจำนวน Tracking Number
-  let startY = 20;
+	// เพิ่มชื่อบริษัทและวันที่ที่หัวเอกสาร
+	doc.setFontSize(18);
+	doc.text(companyName, pageWidth / 2, 12, { align: "center"});
 
-  // เพิ่มชื่อบริษัทและวันที่ที่หัวเอกสาร
-  doc.setFontSize(18);
-  doc.text(companyName, pageWidth / 2, 12, { align: "center"});
+	doc.setFontSize(12);
+	doc.text(`Date: ${today}`, margin, startY);
+	startY += 10;
 
-  doc.setFontSize(12);
-  doc.text(`Date: ${today}`, margin, startY);
-  startY += 10;
+	// เพิ่ม Total of Package
+	doc.text(`Total of Package: ${totalPackages}`, margin, startY);
+	startY += 10;
 
-  // เพิ่ม Total of Package
-  doc.text(`Total of Package: ${totalPackages}`, margin, startY);
-  startY += 10;
+	// เพิ่มช่องข้อมูลพนักงานและขนส่ง
+	const employeeInfo = [
+		{ label: "Klandth Staff",     value: "_____________________" },
+		{ label: "Carrier Signature", value: "_____________________" },
+		{ label: "Deliver Name",      value: "_____________________" },
+		{ label: "Carrier Signature", value: "_____________________" },
+	];
 
-  // เพิ่มช่องข้อมูลพนักงานและขนส่ง
-  const employeeInfo = [
-    { label: "Klandth Staff",     value: "_____________________" },
-    { label: "Carrier Signature", value: "_____________________" },
-    { label: "Deliver Name",      value: "_____________________" },
-    { label: "Carrier Signature", value: "_____________________" },
-  ];
+	employeeInfo.forEach((info) => {
+		doc.text(`${info.label}: ${info.value}`, margin, startY);
+		startY += 10;
+	});
 
-  employeeInfo.forEach((info) => {
-    doc.text(`${info.label}: ${info.value}`, margin, startY);
-    startY += 10;
-  });
+	// ฟังก์ชัน autoTable
+	doc.autoTable({
+		startY: startY + 2,
+		head: headers,
+		body: data,
+		theme: "grid",
+		margin: { top: margin, left: margin, right: margin },
+	
+		didDrawPage: function (data) {
+		// เพิ่มหมายเลขหน้าที่ด้านล่าง
+		doc.setFontSize(10);
+		doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - margin, pageHeight - margin, {
+			align: "right",
+		});
+		doc.text(`Date: ${today}`, margin, pageHeight - margin);
+		},
+	});
 
-  // ฟังก์ชัน autoTable
-  doc.autoTable({
-    startY: startY + 2,
-    head: headers,
-    body: data,
-    theme: "grid",
-    margin: { top: margin, left: margin, right: margin },
- 
-    didDrawPage: function (data) {
-      // เพิ่มหมายเลขหน้าที่ด้านล่าง
-      doc.setFontSize(10);
-      doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - margin, pageHeight - margin, {
-        align: "right",
-      });
-	  doc.text(`Date: ${today}`, margin, pageHeight - margin);
-    },
-  });
+	// บันทึกไฟล์ PDF
+	// doc.save("Carrier_Manifest.pdf");
+	  doc.save(`Carrier_Manifest_${formattedDate}.pdf`);
 
-  // บันทึกไฟล์ PDF
-  doc.save("Carrier_Manifest.pdf");
 }
 
 
